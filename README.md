@@ -37,10 +37,13 @@ None of it ships with this project: `SETUP.cmd` reads it from **your** DCS insta
 
 ## Install
 
-1. Download the latest **Release** zip (or the green **Code** button > **Download ZIP**) and unzip it where it will
-   stay, e.g. `C:\DCS-World-AI-Services`. DCS loads the export from that folder: if you move it later, run `SETUP.cmd`
-   again.
-2. Double-click **`SETUP.cmd`**. It:
+1. Download the latest **Release** zip (or the green **Code** button > **Download ZIP**). Before unzipping it:
+   right-click the zip > **Properties** > tick **Unblock** > OK (Windows marks downloaded files and may stop the
+   `.cmd` files otherwise). Unzip it where it will stay, e.g. `C:\DCS-World-AI-Services`, **not** inside
+   `Saved Games\DCS`: it is a program of its own, not a DCS mod. DCS loads the export from that folder: if you move
+   it later, run `SETUP.cmd` again.
+2. Double-click **`SETUP.cmd`** (if Windows shows "Windows protected your PC": **More info** > **Run anyway**;
+   the project is not signed). It:
    - downloads its own Python 3.12 (checked by SHA-256) and the pinned packages, all inside this folder;
    - downloads the voice model (Supertonic 3) from Hugging Face;
    - finds your DCS install and builds from it what the agents need: cockpit tables, training lessons and manuals of
@@ -80,6 +83,14 @@ In `utilities/`:
 | `DCS_PATCHES.cmd status / update / remove` | the optional DCS install patches |
 | `LIBRARY_BUILD.cmd` | rebuild the F-5E-3 library, e.g. after adding your own `.pdf`/`.md`/`.txt` to `modules\F-5E-3\documents\` |
 | `SRS_TEST.cmd`, `DICTATION_TEST.cmd`, `BRAIN_TEST.cmd`, `COCKPIT_TEST.cmd`, `POSITIONS_CHECK.cmd` | diagnostics with a console |
+
+## Uninstall
+
+1. In the program's folder: `.venv\Scripts\python.exe tools\install_export.py uninstall` and
+   `.venv\Scripts\python.exe tools\install_hook.py uninstall` (removes the export line and the hook from
+   `Saved Games\DCS`), and `utilities\DCS_PATCHES.cmd remove` if you applied the patches.
+2. Optional: `utilities\CHATGPT_LOGIN.cmd --sign-out` revokes the ChatGPT sign-in.
+3. Delete the folder.
 
 ## What changes on your PC
 
