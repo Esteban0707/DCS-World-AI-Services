@@ -1,0 +1,32 @@
+# Downloaded or built by SETUP.cmd on each PC
+/runtime/
+/.venv/
+/models/
+__pycache__/
+*.pyc
+
+# Personal: settings, sign-in, agents, flights, backups of DCS files
+/settings.json
+/settings.json.tmp
+/secrets/
+/agents/
+/logs/
+/backups/
+
+# Generated from the user's own DCS install by SETUP.cmd (Eagle Dynamics data, never shipped)
+/modules/*/library/
+/modules/*/training/
+/modules/*/documents/
+/modules/*/controls.json
+/modules/*/autostart.json
+/modules/*/export_args.lua
+/modules/*/positions.json
+/terrains/
+/dcs/aircraft_rcs.lua
+
+# SRS client files written next to the program
+/default.cfg
+/global.cfg
+
+# Release build output (tools/make_release.py)
+/release/

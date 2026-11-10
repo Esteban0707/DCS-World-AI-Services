@@ -1,0 +1,17 @@
+{
+  "id": "F-5E-3",
+  "display_name": "F-5E-3 Tiger II",
+  "dcs_aircraft_names": ["F-5E-3"],
+  "dcs_source_folder": "Mods/aircraft/F-5E 2024",
+  "library": [
+    {"id": "flight-manual", "title": "DCS F-5E-3 Flight Manual",
+     "source": "Mods/aircraft/F-5E 2024/Doc/DCS F-5Е-3 Flight Manual_ENG.pdf"},
+    {"id": "quick-manual", "title": "DCS F-5E-3 Quick Flight Manual",
+     "source": "Mods/aircraft/F-5E 2024/Doc/DCS F-5Е-3 _QFM_ENG.pdf"}
+  ],
+  "files": {
+    "controls": "controls.json",
+    "autostart": "autostart.json",
+    "training": "training/"
+  }
+}

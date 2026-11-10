@@ -1,0 +1,134 @@
+{
+  "radio": {
+    "all_stations": ["todas las estaciones", "todas las unidades", "todos los equipos", "a todos", "todos", "flight",
+                     "escuadrilla"],
+    "numbers": {"2": ["dos"], "3": ["tres"], "4": ["cuatro"]}
+  },
+  "tts_test": "Instructor en línea. Comprobación de radio, uno, dos, tres.",
+  "intents": {
+    "continue": [
+      "continuar",
+      "continua",
+      "continue",
+      "listo",
+      "lista",
+      "siguiente",
+      "adelante",
+      "hecho"
+    ],
+    "repeat": [
+      "repite",
+      "repetir",
+      "repitelo",
+      "otra vez",
+      "de nuevo"
+    ]
+  },
+  "lesson_started": "Lección iniciada: {name}.",
+  "lesson_finished": "Lección terminada. Buen trabajo.",
+  "waiting_for_pilot": "Cuando estés listo, di continuar.",
+  "look_at": "Mira: {controls}.",
+  "nothing_to_repeat": "Todavía no he dicho nada que repetir.",
+  "no_brain": "Todavía no tengo un modelo conectado para responder a eso.",
+  "brain_limit": "Llegaste al límite de uso de tu plan de ChatGPT. Revísalo en la configuración de uso de ChatGPT.",
+  "brain_sign_in": "Necesito que vuelvas a iniciar sesión con ChatGPT para poder responder.",
+  "brain_error": "No pude consultar al modelo. Inténtalo de nuevo en un momento.",
+  "brain_test_question": "Instructor, aquí el piloto, prueba de radio. ¿Me recibes?",
+  "chatgpt_login": {
+    "done": "Sesión iniciada en DCS-Instructor.",
+    "failed": "No se pudo iniciar la sesión.",
+    "close": "Ya puedes cerrar esta ventana y volver a la consola."
+  },
+  "dictation_page": {
+    "connect": "Permitir micrófono",
+    "connecting": "Conectando el micrófono…",
+    "ready": "Listo. Mantén el botón de hablar y habla. Micrófono: {device}",
+    "listening_ready": "Listo. Mantén el botón de hablar y habla.",
+    "default_device": "el predeterminado de Chrome",
+    "not_connected": "no encontré \"{device}\", uso el predeterminado de Chrome",
+    "no_permission": "Sin acceso al micrófono: {error}",
+    "need_chrome": "Esta página necesita Google Chrome para el dictado.",
+    "no_instructor": "El instructor no está en marcha.",
+    "mic_error": "Error del dictado: {error}",
+    "start_failed": "El dictado no pudo empezar: {error}",
+    "muted": "El dispositivo silenció el micrófono \"{device}\".",
+    "muted_line": "Micrófono silenciado: actívalo en el casco.",
+    "unmuted": "El micrófono vuelve a funcionar.",
+    "pilot": "Piloto",
+    "instructor": "Instructor"
+  },
+  "checks": {
+    "export_missing": "La exportación de cabina no está instalada en {path}. Ejecuta SETUP.cmd y reinicia DCS.",
+    "hook_missing": "El hook de misión (indicativo, radar, meteo) no está instalado en {path}. Ejecuta SETUP.cmd y reinicia DCS.",
+    "library_failed": "No se pudo reconstruir la biblioteca de {module}: {error}",
+    "dcs_data_missing": "Aún faltan datos de tu instalación de DCS: {what}. Ejecuta SETUP.cmd.",
+    "footer": "El instructor arranca igual. Detalles en logs\\launcher.log"
+  },
+  "atc": {
+    "numbers": {
+      "digits": [
+        "cero",
+        "uno",
+        "dos",
+        "tres",
+        "cuatro",
+        "cinco",
+        "seis",
+        "siete",
+        "ocho",
+        "nueve"
+      ],
+      "point": "decimal",
+      "letters": {
+        "L": "izquierda",
+        "R": "derecha",
+        "C": "central"
+      },
+      "thousands": "{n} mil",
+      "thousands_half": "{n} mil quinientos"
+    },
+    "phrases": {
+      "runway": "pista {digits}",
+      "wind": "viento {direction}, {speed} nudos",
+      "wind_calm": "viento en calma",
+      "qfe": "QFE {value}",
+      "qnh": "QNH {value}",
+      "taxi_to_holding_point": "ruede al punto de espera de la {runway}",
+      "taxi_to_parking": "ruede al aparcamiento",
+      "vacate_and_taxi_to_parking": "abandone la pista y ruede al aparcamiento",
+      "stand_by": "espere",
+      "hold_position": "mantenga posición",
+      "traffic_on_final": "tráfico {type} en final, a {distance} millas",
+      "traffic_on_short_final": "tráfico {type} en final corta",
+      "traffic_on_runway": "tráfico {type} en la pista",
+      "runway_occupied": "tráfico en la pista",
+      "cleared_for_takeoff": "{runway}, autorizado a despegar",
+      "cleared_for_immediate_takeoff": "{runway}, autorizado a despegue inmediato",
+      "takeoff_or_vacate": "{traffic}. {runway}, autorizado a despegue inmediato o abandone la pista",
+      "report_final": "notifique en final",
+      "continue_approach": "continúe la aproximación",
+      "number_two": "número dos",
+      "cleared_to_land": "{runway}, autorizado a aterrizar",
+      "go_around": "motor y al aire",
+      "vectors_for_approach": "vectores para la aproximación a la {runway}",
+      "turn_left": "vire a la izquierda",
+      "turn_right": "vire a la derecha",
+      "fly": "vuele",
+      "keep": "continúe",
+      "heading": "rumbo {digits}",
+      "intercept_final": "intercepte la final de la {runway}",
+      "descend": "descienda a {height} pies",
+      "climb": "ascienda a {height} pies",
+      "maintain_height": "mantenga {height} pies",
+      "established": "en final de la {runway}, a {distance} millas, continúe la aproximación",
+      "departed": "en el aire, cambio de frecuencia aprobado, buen vuelo",
+      "runway_free": "pista libre. {clearance}",
+      "keep_holding": "continúe manteniendo posición, {traffic}",
+      "unannounced_taxi": "le veo rodando sin autorización, mantenga posición y notifique intenciones",
+      "runway_incursion": "no está autorizado a entrar en la {runway}, mantenga posición",
+      "runway_incursion_traffic": "no está autorizado a entrar en la {runway}, {traffic}, abandone la pista inmediatamente",
+      "wrong_station": "está en la frecuencia de {station}, no de {other}. Compruebe la frecuencia",
+      "unable": "imposible, espere"
+    }
+  }
+}

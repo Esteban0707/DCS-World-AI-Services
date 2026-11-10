@@ -1,0 +1,18 @@
+{
+  "about": "Hand-checked switch positions for the F-5E-3, merged by tools/build_positions.py. Each entry names its evidence: a DCS training lesson cockpit check (lesson rule name, expected argument range) and/or the live cold-start capture of 2026-10-31 (logs/cockpit.jsonl, DCS autostart).",
+  "args": {
+    "387": {"source": "lesson cold_start rule 'GEN F 4' expects 0.95..1 after battery ON; live autostart 0 -> 1"},
+    "388": {"source": "lesson rule 'GEN1 ON F 6' expects 0.95..1; live autostart 0 -> 1"},
+    "389": {"source": "lesson rule 'GEN2 ON F 7' expects 0.95..1; live autostart 0 -> 1"},
+    "380": {"source": "lesson rule 'PUMP1 ON F 10' expects 0.95..1; live autostart 0 -> 1"},
+    "382": {"source": "lesson rule 'PUMP2 ON F 11' expects 0.95..1; live autostart 0 -> 1"},
+    "83": {"source": "lesson rule 'CHK F 71' (gear up check) expects 0.95..1 = LG UP; cold aircraft starts at 0 = LG DOWN"},
+    "115": {"source": "lesson rule 'FLAPS OK F 27' expects -1..-0.95 when the flaps are set to AUTO"},
+    "316": {"source": "lesson rule 'STBY F 24' expects 0.05..0.15 = STBY; 'AIRBRK F 25' -0.05..0.05 = OFF"},
+    "322": {"source": "lesson rule 'PITCH ON F 29' expects 0.05..1 = PITCH"},
+    "323": {"source": "lesson rule 'YAW ON F 30' expects 0.05..1 = YAW"},
+    "375": {"source": "lesson rule 'CANOPY F 59' expects 0.95..1 after 'activate pitot heating'"},
+    "101": {"source": "landing lesson rule 'ABRK ID 10' says 'extend the airbrakes now' while the switch is -0.9..1, and the next rule 'RAD F 26' goes on at -1..-0.95, so -1 = OUT; cold start lesson 'FLAPS F 26' expects 0.95..1 (retracted) after the speed brake check. The toggle rule had it reversed: flight of 2026-11-02, the pilot reported the speed brakes retracted while the switch was at 1",
+            "positions": [{"value": 1.0, "label": "IN"}, {"value": 0.0, "label": "OFF"}, {"value": -1.0, "label": "OUT"}]},
+    "250": {"source": "lesson rule 'UP F 51' asks to set the NOSE STRUT switch to extend for takeoff; 'UP ON F 52' goes on at 0.95..1 = EXTEND"}  }
+}

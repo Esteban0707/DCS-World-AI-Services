@@ -1,0 +1,51 @@
+{
+  "language": "en",
+  "cockpit_port": 47820,
+  "dcs": {
+    "install": "",
+    "saved_games": ""
+  },
+  "lesson": "f_5e_training_cold_start_taxi_takeoff",
+  "voice": {
+    "name": "M1",
+    "speed": 1.05,
+    "model_dir": "models/supertonic3",
+    "output": "srs",
+    "steps": 10,
+    "silence_s": 0.3,
+    "volume": 1.0,
+    "language": "en"
+  },
+  "srs": {
+    "path": "",
+    "frequencies_mhz": [
+      251.0
+    ],
+    "modulations": [
+      "AM"
+    ],
+    "coalition": 2,
+    "port": 5002,
+    "name": "DCS-Instructor",
+    "volume": 1.0
+  },
+  "mic": {
+    "device": ""
+  },
+  "speech": {
+    "provider": "chrome",
+    "language": "en-US",
+    "port": 47821
+  },
+  "brain": {
+    "provider": "chatgpt",
+    "model": "gpt-6.1-terra"
+  },
+  "audio": {
+    "output_device": ""
+  },
+  "gui": {
+    "port": 47822,
+    "open_on_start": true
+  }
+}

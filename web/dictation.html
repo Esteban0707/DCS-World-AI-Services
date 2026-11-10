@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>DCS-Instructor dictation</title>
+<style>
+  body { font: 15px system-ui, sans-serif; background: #101418; color: #d8dee4; margin: 16px; }
+  button { font-size: 17px; padding: 10px 18px; }
+  #ptt { display: inline-block; margin-left: 12px; padding: 6px 12px; border-radius: 6px; background: #333; }
+  #ptt.on { background: #b3261e; color: #fff; }
+  #status { margin: 10px 0; color: #9fb3c8; }
+  #log { font-family: Consolas, monospace; white-space: pre-wrap; }
+  .pilot { color: #e8c468; } .instructor { color: #7fd1a0; } .err { color: #ff8a80; }
+</style>
+</head>
+<body>
+<button id="start" hidden>Microphone</button><span id="ptt">PTT</span>
+<div id="status">…</div>
+<div id="log"></div>
+<script>
+// Chrome's own dictation (Web Speech API), only while the joystick push-to-talk is held. PTT presses come from the
+// instructor as server-sent events, not page timers, which Chrome slows down when DCS hides this window. On release,
+// whatever was heard goes to /heard. Language, microphone and this page's texts come from /status (locales/*.json).
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const $ = id => document.getElementById(id);
+const STUCK_MS = 30000;  // no press lasts this long: a recognition still open from an earlier press is stuck
+let ready = false, rec = null, finals = [], interim = '', pressedAt = 0, audioStartMs = null, pttHeld = false;
+let micName = '', micTrack = null, T = {}, speechLang = 'es-US', recError = null;
+const text = (key, values = {}) => (T[key] || key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '');
+const post = (path, body) => fetch(path, { method: 'POST', body: JSON.stringify(body) }).catch(() => {});
+
+function line(message, cls) {
+  const div = document.createElement('div');
+  div.className = cls || '';
+  div.textContent = `${new Date().toLocaleTimeString()}  ${message}`;
+  $('log').prepend(div);
+  while ($('log').childNodes.length > 60) $('log').lastChild.remove();
+}
+
+// msg.press: the press number, sent back with the text; msg.lang: the dictation language of the agent on that frequency.
+function pttDown(msg = {}) {
+  pttHeld = true;
+  $('ptt').classList.add('on');
+  if (!ready) return;
+  if (rec) {
+    // Seen in practice: a recognition that never ends makes every later press be ignored. Drop it instead.
+    if (performance.now() - pressedAt < STUCK_MS) return;
+    post('/log', { error: 'stuck_recognition', open_ms: Math.round(performance.now() - pressedAt) });
+    const old = rec; rec = null; old.onend = null;
+    try { old.abort(); } catch (e) {}
+  }
+  finals = []; interim = ''; pressedAt = performance.now(); audioStartMs = null; recError = null;
+  const r = new Recognition();
+  rec = r;
+  const press = msg.press;
+  r.lang = msg.lang || speechLang; r.continuous = true; r.interimResults = true;
+  r.onaudiostart = () => { audioStartMs = Math.round(performance.now() - pressedAt); };
+  r.onresult = ev => {
+    const pending = [];
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      if (ev.results[i].isFinal) finals.push(ev.results[i][0].transcript.trim());
+      else pending.push(ev.results[i][0].transcript);
+    }
+    interim = pending.join(' ');
+    $('status').textContent = '🎙 ' + [...finals, interim].join(' ');
+  };
+  r.onerror = ev => {
+    recError = ev.error;  // kept with the press: live 2026-11-03 an A-10 flight gave 23 empty presses and no reason
+    if (ev.error !== 'no-speech' && ev.error !== 'aborted') {
+      line(text('mic_error', { error: ev.error }), 'err'); post('/log', { error: ev.error });
+    }
+  };
+  r.onend = () => {
+    rec = null;
+    const heard = [...finals, interim].join(' ').trim();
+    const info = { press, lang: r.lang, audio_start_ms: audioStartMs, held_ms: Math.round(performance.now() - pressedAt),
+                   hidden: document.hidden, used_interim: Boolean(interim), error: recError,
+                   mic_muted: micTrack ? micTrack.muted : null };
+    if (heard) line(`${text('pilot')}: ${heard}`, 'pilot');
+    $('status').textContent = text('listening_ready');
+    post('/heard', { text: heard, info });
+  };
+  startRecognition(r, true);
+}
+
+// Dictate from the chosen microphone's track; without one, from Chrome's default. A headset that muted and unmuted
+// its microphone can leave start(track) failing although the track looks live: reopen it and retry once per press.
+async function startRecognition(r, retry) {
+  try {
+    if (micTrack && micTrack.readyState === 'live') r.start(micTrack.clone());
+    else r.start();
+  } catch (e) {
+    post('/log', { error: 'start_failed', message: e.message, retry });
+    if (retry && micName && rec === r) {
+      await connectMicrophone();
+      if (rec === r && pttHeld) return startRecognition(r, false);
+      if (rec === r) rec = null;  // released meanwhile: nothing to dictate
+      return;
+    }
+    if (rec === r && pttHeld) {
+      try { r.start(); return; } catch (e2) { post('/log', { error: 'start_failed_default', message: e2.message }); }
+    }
+    if (rec === r) rec = null;
+    line(text('start_failed', { error: e.message }), 'err');
+  }
+}
+
+function pttUp() {
+  pttHeld = false;
+  $('ptt').classList.remove('on');
+  if (rec) try { rec.stop(); } catch (e) {}  // stop(), not abort(): Chrome still delivers the last words
+}
+
+const events = new EventSource('/events');
+events.onmessage = ev => {
+  const msg = JSON.parse(ev.data);
+  if (msg.event === 'ptt') msg.down ? pttDown(msg) : pttUp();
+  else if (msg.event === 'close') { events.close(); window.close(); }  // the program is stopping
+  else if (msg.event === 'instructor') line(`${text('instructor')}: ${msg.text}`, 'instructor');
+  else if (msg.event === 'status') $('status').textContent = msg.text;
+  else if (msg.event === 'microphone') { micName = msg.name || ''; connectMicrophone(); }  // chosen in the GUI
+};
+events.onerror = () => { $('status').textContent = text('no_instructor'); };
+
+// The configured microphone by (part of) its Windows name; '' = Chrome's default.
+async function chosenMicrophone() {
+  if (!micName) return null;
+  const inputs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+  // Chrome also lists "Default - …" / "Communications - …" aliases; prefer the real device.
+  const real = inputs.filter(d => d.deviceId !== 'default' && d.deviceId !== 'communications');
+  const wanted = micName.toLowerCase();
+  return real.find(d => d.label.toLowerCase() === wanted) || real.find(d => d.label.toLowerCase().includes(wanted))
+      || null;
+}
+
+async function connectMicrophone() {
+  if (!Recognition) { $('status').textContent = text('need_chrome'); return; }
+  try {  // The instructor's Chrome profile grants this without a prompt.
+    const probe = await navigator.mediaDevices.getUserMedia({ audio: true });  // device labels need a grant
+    probe.getTracks().forEach(t => t.stop());
+    if (micTrack) { micTrack.stop(); micTrack = null; }
+    const device = await chosenMicrophone();
+    if (device) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: device.deviceId } } });
+      micTrack = stream.getAudioTracks()[0];
+      micTrack.onended = () => post('/log', { error: 'microphone_track_ended', device: device.label });
+      // A VR headset can mute its own microphone: the track then carries no audio. Say so, and log it.
+      micTrack.onmute = () => {
+        $('status').textContent = text('muted', { device: device.label });
+        line(text('muted_line'), 'err');
+        post('/log', { error: 'microphone_muted', device: device.label });
+      };
+      micTrack.onunmute = () => {
+        $('status').textContent = text('unmuted');
+        post('/log', { microphone: 'unmuted', device: device.label });
+      };
+      if (micTrack.muted) micTrack.onmute();
+    }
+    ready = true; $('start').hidden = true;
+    const which = device ? device.label : (micName ? text('not_connected', { device: micName }) : text('default_device'));
+    $('status').textContent = text('ready', { device: which });
+    post('/log', { microphone: 'ready', device: device ? device.label : 'default', wanted: micName || 'default' });
+  } catch (e) {
+    $('start').hidden = false;
+    $('status').textContent = text('no_permission', { error: e.message });
+  }
+}
+
+async function start() {
+  try {
+    const status = await (await fetch('/status')).json();
+    T = status.text || {}; speechLang = status.language || speechLang; micName = status.microphone || '';
+  } catch (e) { micName = ''; }
+  $('start').textContent = text('connect');
+  $('status').textContent = text('connecting');
+  connectMicrophone();
+}
+$('start').onclick = connectMicrophone;
+start();
+</script>
+</body>
+</html>

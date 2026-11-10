@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DCS_AI_Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<!-- The local GUI (gui/server.py). Every text comes from /api/text (locales/en.json "gui"). -->
+<div class="app">
+  <nav class="side" aria-label="Sections">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M6 16 L14 9 L22 16 M14 9 V22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <div><strong data-t="app_name"></strong><span data-t="local"></span></div>
+    </div>
+    <div id="nav"></div>
+  </nav>
+
+  <main>
+    <!-- Status -->
+    <section class="screen" id="screen-status" hidden>
+      <header class="head">
+        <div><h1 data-t="status.title"></h1><p data-t="status.subtitle"></p></div>
+        <div class="row">
+          <span class="badge"><span class="light" id="air-light"></span><span id="air-text"></span></span>
+          <button type="button" class="ghost" id="open-srs" data-t="status.open_srs"></button>
+          <button type="button" class="primary" id="stop" data-t="status.stop"></button>
+        </div>
+      </header>
+      <div class="tiles" id="tiles"></div>
+      <div class="columns">
+        <section class="panel wide" aria-labelledby="radio-title">
+          <div class="panel-head"><h2 id="radio-title" data-t="status.radio"></h2><span class="muted small" data-t="status.last_exchanges"></span></div>
+          <div id="exchanges"></div>
+        </section>
+        <section class="panel" aria-labelledby="services-title">
+          <h2 id="services-title" data-t="status.services"></h2>
+          <div id="status-services" class="list"></div>
+          <a href="#services" class="more" data-t="status.configure_services"></a>
+        </section>
+      </div>
+    </section>
+
+    <!-- Services: the agents -->
+    <section class="screen" id="screen-services" hidden>
+      <header class="head">
+        <div><h1 data-t="services.title"></h1><p data-t="services.subtitle"></p></div>
+        <div class="row"><button type="button" class="primary" id="add-agent" data-t="add.button"></button></div>
+      </header>
+      <section class="panel add-agent" id="add-panel" hidden>
+        <h2 data-t="add.title"></h2>
+        <div class="fields">
+          <label class="field"><span data-t="add.role"></span><select id="add-role"></select></label>
+          <label class="field"><span data-t="agent.name"></span><input type="text" id="add-name" maxlength="32"></label>
+        </div>
+        <p class="hint" id="add-role-about"></p>
+        <div class="fields">
+          <label class="field"><span data-t="agent.frequency"></span><input type="number" id="add-frequency" min="30" max="400" step="0.005" inputmode="decimal"></label>
+          <label class="field"><span data-t="agent.modulation"></span><select id="add-modulation"><option value="AM">AM</option><option value="FM">FM</option></select></label>
+        </div>
+        <div id="add-squad" hidden>
+          <div class="fields">
+            <label class="field"><span data-t="add.group"></span><input type="text" id="add-group" maxlength="64"></label>
+          </div>
+          <p class="hint" data-t="add.group_hint"></p>
+        </div>
+        <div id="add-wingman" hidden>
+          <div class="fields">
+            <label class="field"><span data-t="add.number"></span><select id="add-number"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
+          </div>
+          <p class="hint" data-t="add.number_hint"></p>
+        </div>
+        <div class="row">
+          <button type="button" class="primary" id="add-create" data-t="add.create"></button>
+          <button type="button" class="ghost" id="add-cancel" data-t="add.cancel"></button>
+        </div>
+      </section>
+      <div class="cards" id="agent-cards"></div>
+    </section>
+
+    <!-- One agent -->
+    <section class="screen" id="screen-agent" hidden>
+      <header class="head">
+        <div>
+          <a href="#services" class="back" data-t="services.back"></a>
+          <h1 id="agent-title"></h1>
+          <p id="agent-subtitle"></p>
+        </div>
+        <div class="row"><span class="muted small" id="agent-state" aria-live="polite"></span></div>
+      </header>
+      <div class="tabs" role="tablist" id="tabs"></div>
+
+      <!-- Frequency -->
+      <section class="tab-panel" id="tab-frequency" role="tabpanel" hidden>
+        <div class="columns">
+          <section class="panel wide">
+            <div class="fields">
+              <label class="field"><span data-t="agent.name"></span><input type="text" id="agent-name" maxlength="32"></label>
+              <label class="field check"><input type="checkbox" id="agent-active"><span data-t="agent.active"></span></label>
+            </div>
+            <p class="hint" id="agent-name-note" hidden></p>
+            <div id="agent-aliases-box" hidden>
+              <div class="fields">
+                <label class="field"><span data-t="agent.aliases"></span><input type="text" id="agent-aliases" maxlength="300"></label>
+              </div>
+              <p class="hint" data-t="agent.aliases_hint"></p>
+            </div>
+            <div id="agent-squad" hidden>
+              <div class="fields">
+                <label class="field"><span data-t="add.group"></span><input type="text" id="agent-group" maxlength="64"></label>
+              </div>
+              <p class="hint" data-t="agent.group_hint"></p>
+            </div>
+            <div id="agent-wingman" hidden>
+              <div class="fields">
+                <label class="field"><span data-t="add.number"></span><select id="agent-number"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
+              </div>
+              <p class="hint" data-t="agent.number_hint"></p>
+            </div>
+            <div class="fields">
+              <label class="field"><span data-t="agent.frequency"></span><input type="number" id="agent-frequency" min="30" max="400" step="0.005" inputmode="decimal"></label>
+              <label class="field"><span data-t="agent.modulation"></span><select id="agent-modulation"><option value="AM">AM</option><option value="FM">FM</option></select></label>
+            </div>
+            <p class="hint" id="agent-airfield-note" data-t="agent.airfield_note" hidden></p>
+            <div class="row"><button type="button" class="primary" id="save-frequency" data-t="agent.save"></button></div>
+          </section>
+          <section class="panel">
+            <h2 data-t="agent.how_title"></h2>
+            <p class="muted" data-t="agent.how_text"></p>
+            <p class="muted" data-t="agent.how_folder"></p>
+            <div id="delete-box" class="row" hidden>
+              <button type="button" class="danger" id="delete-agent" data-t="agent.delete"></button>
+              <p class="hint" data-t="agent.delete_hint"></p>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- Mission -->
+      <section class="tab-panel" id="tab-mission" role="tabpanel" hidden>
+        <section class="panel">
+          <label class="field" for="mission-text"><span data-t="mission.label"></span></label>
+          <textarea id="mission-text" class="mission" rows="22" spellcheck="false"></textarea>
+          <span class="hint" id="mission-fields"></span>
+          <div class="row">
+            <button type="button" class="primary" id="save-mission" data-t="mission.save"></button>
+            <button type="button" class="ghost" id="restore-mission" data-t="mission.restore"></button>
+            <span class="muted small" id="mission-origin"></span>
+          </div>
+        </section>
+        <!-- A wingman: how much it talks on its own, and its memory of the pilot -->
+        <section class="panel" id="wingman-memory" hidden>
+          <h2 data-t="memory.title"></h2>
+          <p class="hint" data-t="memory.text"></p>
+          <label class="field" for="wingman-chatter"><span data-t="memory.chatter"></span>
+            <select id="wingman-chatter">
+              <option value="off" data-t="memory.chatter_off"></option>
+              <option value="rare" data-t="memory.chatter_rare"></option>
+              <option value="normal" data-t="memory.chatter_normal"></option>
+            </select></label>
+          <label class="field" for="memory-pilot"><span data-t="memory.pilot"></span></label>
+          <textarea id="memory-pilot" class="mission" rows="8" spellcheck="false"></textarea>
+          <label class="field" for="memory-flights"><span data-t="memory.flights"></span></label>
+          <textarea id="memory-flights" class="mission" rows="6" spellcheck="false"></textarea>
+          <span class="hint" data-t="memory.hint"></span>
+          <div class="row">
+            <button type="button" class="primary" id="save-memory" data-t="memory.save"></button>
+          </div>
+        </section>
+      </section>
+
+      <!-- Triggers -->
+      <section class="tab-panel" id="tab-triggers" role="tabpanel" hidden>
+        <section class="panel" id="triggers-fixed" hidden><p class="muted" data-t="triggers.fixed"></p></section>
+        <div class="columns" id="triggers-edit">
+          <div class="stack wide">
+            <section class="panel">
+              <div class="panel-head"><h2 data-t="triggers.events_title"></h2>
+                <button type="button" class="ghost" id="add-event" data-t="triggers.add_event"></button></div>
+              <p class="hint" data-t="triggers.events_text"></p>
+              <div id="event-rows" class="trigger-rows"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><h2 data-t="triggers.actions_title"></h2>
+                <button type="button" class="ghost" id="add-action" data-t="triggers.add_action"></button></div>
+              <p class="hint" data-t="triggers.actions_text"></p>
+              <div id="action-rows" class="trigger-rows"></div>
+            </section>
+            <div class="row"><button type="button" class="primary" id="triggers-save" data-t="triggers.save"></button></div>
+          </div>
+          <div class="stack">
+          <section class="panel accent assistant">
+            <div class="panel-head"><h2 data-t="assistant.title"></h2>
+              <button type="button" class="ghost" id="assistant-reset" data-t="assistant.reset"></button></div>
+            <p class="hint" data-t="assistant.text"></p>
+            <div id="assistant-log" class="assistant-log" aria-live="polite"></div>
+            <textarea id="assistant-input" rows="3" maxlength="2000"></textarea>
+            <div class="row">
+              <button type="button" class="primary" id="assistant-send" data-t="assistant.send"></button>
+              <span class="muted small" id="assistant-state"></span>
+            </div>
+          </section>
+          <section class="panel">
+            <h2 data-t="triggers.example_title"></h2>
+            <p class="muted" data-t="triggers.example_intro"></p>
+            <ol class="steps">
+              <li data-t="triggers.example_1"></li>
+              <li data-t="triggers.example_2"></li>
+              <li data-t="triggers.example_3"></li>
+              <li data-t="triggers.example_4"></li>
+            </ol>
+            <p class="hint" data-t="triggers.example_note"></p>
+            <p class="hint" data-t="triggers.example_internal"></p>
+            <p class="hint" data-t="triggers.example_condition"></p>
+          </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- TTS -->
+      <section class="tab-panel" id="tab-tts" role="tabpanel" hidden>
+        <div class="row" role="group" id="engines"></div>
+        <div class="columns">
+          <section class="panel wide">
+            <div class="fields">
+              <label class="field"><span data-t="tts.language"></span><select id="tts-language"></select></label>
+              <label class="field"><span data-t="tts.output"></span><select id="tts-output"></select></label>
+            </div>
+            <div class="field">
+              <span data-t="tts.voice"></span>
+              <div class="voices" role="group" id="voices"></div>
+            </div>
+            <div id="sliders"></div>
+            <div class="row"><button type="button" class="primary" id="tts-save" data-t="tts.save"></button></div>
+          </section>
+          <aside class="stack">
+            <section class="panel accent">
+              <h2 data-t="tts.test"></h2>
+              <label class="field"><span data-t="tts.test_phrase"></span><textarea id="test-text" rows="3"></textarea></label>
+              <div class="row">
+                <button type="button" class="primary grow" id="test-srs"></button>
+                <button type="button" class="ghost grow" id="test-speakers" data-t="tts.test_speakers"></button>
+              </div>
+              <span class="mono small muted" id="test-result" aria-live="polite"></span>
+            </section>
+            <section class="panel">
+              <h2 data-t="tts.radio_effect"></h2>
+              <p class="muted" data-t="tts.radio_effect_text"></p>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <!-- STT -->
+      <section class="tab-panel" id="tab-stt" role="tabpanel" hidden>
+        <div class="columns">
+          <section class="panel wide">
+            <div class="field">
+              <span data-t="stt.provider"></span>
+              <strong id="stt-provider"></strong>
+              <span class="hint" data-t="stt.provider_hint"></span>
+            </div>
+            <label class="field"><span data-t="stt.language"></span><select id="stt-language"></select></label>
+            <span class="hint" data-t="stt.language_hint"></span>
+            <div class="row"><button type="button" class="primary" id="stt-save" data-t="stt.save"></button></div>
+          </section>
+          <section class="panel">
+            <h2 data-t="stt.microphone"></h2>
+            <p class="muted" id="stt-mic"></p>
+            <a href="#audio" class="more" data-t="stt.change_microphone"></a>
+          </section>
+        </div>
+      </section>
+    </section>
+
+    <!-- Controls and audio -->
+    <section class="screen" id="screen-audio" hidden>
+      <header class="head">
+        <div><h1 data-t="audio.title"></h1><p data-t="audio.subtitle"></p></div>
+        <div class="row"><span class="muted small" id="audio-state" aria-live="polite"></span><button type="button" class="ghost" id="refresh" data-t="audio.refresh"></button></div>
+      </header>
+      <div class="columns">
+        <section class="panel wide">
+          <div class="field">
+            <label for="mic" data-t="audio.microphone"></label>
+            <select id="mic"></select>
+            <span class="hint" data-t="audio.microphone_hint"></span>
+          </div>
+          <div class="field">
+            <label for="output" data-t="audio.output"></label>
+            <select id="output"></select>
+            <span class="hint" data-t="audio.output_hint"></span>
+          </div>
+          <div class="field">
+            <span data-t="audio.ptt"></span>
+            <strong id="ptt"></strong>
+            <span class="hint" id="ptt-gate"></span>
+            <span class="hint" data-t="audio.ptt_hint"></span>
+          </div>
+          <div class="field">
+            <span data-t="audio.ptt_radio2"></span>
+            <strong id="ptt-radio2"></strong>
+            <span class="hint" data-t="audio.ptt_radio2_hint"></span>
+          </div>
+        </section>
+        <section class="panel">
+          <h2 data-t="audio.srs_title"></h2>
+          <p class="muted" data-t="audio.srs_text"></p>
+          <dl class="facts" id="srs-devices"></dl>
+          <p class="hint" id="srs-change" data-t="audio.srs_change"></p>
+        </section>
+      </div>
+    </section>
+
+    <!-- DCS: our patches in the DCS install, export and hook -->
+    <section class="screen" id="screen-dcs" hidden>
+      <header class="head">
+        <div><h1 data-t="dcs.title"></h1><p data-t="dcs.subtitle"></p></div>
+        <div class="row"><span class="muted small" id="dcs-state" aria-live="polite"></span></div>
+      </header>
+      <div class="columns">
+        <section class="panel wide">
+          <h2 data-t="dcs.patches_title"></h2>
+          <p class="muted" id="dcs-install"></p>
+          <dl class="facts" id="dcs-patches"></dl>
+          <div class="row">
+            <button type="button" class="primary" id="dcs-update" data-t="dcs.update"></button>
+            <button type="button" class="ghost" id="dcs-remove" data-t="dcs.remove"></button>
+          </div>
+          <p class="hint" data-t="dcs.update_hint"></p>
+        </section>
+        <section class="panel">
+          <h2 data-t="dcs.saved_games_title"></h2>
+          <dl class="facts" id="dcs-saved-games"></dl>
+          <p class="hint" data-t="dcs.saved_games_hint"></p>
+        </section>
+      </div>
+    </section>
+
+    <!-- Screens not built yet -->
+    <section class="screen" id="screen-soon" hidden>
+      <header class="head"><div><h1 id="soon-title"></h1><p data-t="soon"></p></div></header>
+    </section>
+
+    <p class="error" id="error" role="alert" hidden></p>
+  </main>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
