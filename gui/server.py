@@ -12,10 +12,15 @@ frequency, active, voice, speech, Triggers "events"/"actions"; the ATC's name is
 /api/agents/<id>/delete (moved to backups/agents/),
 /api/agents/<id>/triggers/assist (+ /reset: the Triggers assistant, gui/trigger_assistant.py), /api/audio, /api/voice/test, /api/stop. Texts come from locales/en.json "gui" (the
 GUI is English only).
+Models: GET /api/models (+ /refresh; the signed-in account's catalog, kept MODELS_KEPT_S), POST /api/brain (the
+default model, "brain.model"); an agent's own model is "model" in POST /api/agents/<id> ("" = the default). Running brains take a
+new choice at once.
 """
 import json
 import queue
+import re
 import threading
+import time
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
@@ -26,6 +31,7 @@ from shared import settings as settings_file
 from shared import triggers
 from shared.agents import ADDABLE_ROLES, FIXED_ROLES, GROUP_ROLES, MISSION_FIELDS, MODULATIONS, AgentStore
 from shared.locale import load_locale
+from instructor.brain import default_model
 from wingman.memory import Memory
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -39,6 +45,8 @@ TEST_TEXT_MAX = 500
 MISSION_MAX = 20000
 NAME_MAX = 32
 ALIASES_MAX = 8
+MODEL_SLUG = re.compile(r'[A-Za-z0-9][A-Za-z0-9._:-]{0,63}')
+MODELS_KEPT_S = 600   # the account's model catalog, asked again after this (or on "Refresh")
 # Languages Chrome's dictation recognizes (BCP 47), offered in each agent's STT tab.
 STT_LANGUAGES = ('en-US', 'en-GB', 'es-US', 'es-ES', 'es-MX', 'de-DE', 'fr-FR', 'it-IT', 'pt-BR', 'pt-PT', 'ru-RU',
                  'uk-UA', 'pl-PL', 'nl-NL', 'cs-CZ', 'sv-SE', 'tr-TR', 'ja-JP', 'ko-KR', 'zh-CN')
@@ -97,6 +105,8 @@ def agent_changes(body: dict) -> dict:
         if len(aliases) > ALIASES_MAX or any(len(a) > NAME_MAX for a in aliases):
             raise ValueError('aliases')
         changes['aliases'] = aliases
+    if 'model' in body:   # the agent's own model; "" = the program's default ("brain.model")
+        changes['model'] = checked_model(body['model'], allow_default=True)
     if 'voice' in body:
         changes['voice'] = voice_changes(body['voice'] or {})
     if 'speech' in body:
@@ -105,6 +115,25 @@ def agent_changes(body: dict) -> dict:
             raise ValueError('speech.language')
         changes['speech'] = {'language': language}
     return changes
+
+
+def checked_model(value, allow_default: bool = False) -> str:
+    """A model slug as the catalog writes them ("gpt-6.1-terra"); ValueError('model') otherwise."""
+    model = str(value or '').strip()
+    if model == '' and allow_default:
+        return ''
+    if not MODEL_SLUG.fullmatch(model):
+        raise ValueError('model')
+    return model
+
+
+def chatgpt_catalog(settings: dict) -> list[dict]:
+    """The models the signed-in ChatGPT account offers ([{slug, display_name}]); AuthError/OSError when it can't."""
+    from instructor import chatgpt_auth
+    account = chatgpt_auth.load_account(client_id=settings.get('brain', {}).get('account', ''))
+    if not account:
+        raise chatgpt_auth.AuthError('no ChatGPT sign-in saved')
+    return chatgpt_auth.list_models(chatgpt_auth.Session(account).access_token())
 
 
 def audio_changes(body: dict) -> dict:
@@ -126,8 +155,10 @@ def languages() -> list[str]:
 
 class Gui:
     def __init__(self, live: Live | None = None, port: int = DEFAULT_PORT, settings_path: Path = settings_file.PATH,
-                 agents: AgentStore | None = None):
+                 agents: AgentStore | None = None, catalog=chatgpt_catalog):
         self.live = live or Live()
+        self.catalog = catalog                 # settings -> the account's models (chatgpt_catalog)
+        self.models_kept: tuple[float, list[dict]] | None = None
         self.settings_path = settings_path
         if self.live.agents is None:
             self.live.agents = agents or AgentStore(settings=settings_file.load(settings_path))
@@ -146,6 +177,11 @@ class Gui:
     def origins(self) -> tuple[str, ...]:
         """Where a POST may come from: this GUI's own page (no Origin header = not a browser)."""
         return '', f'http://127.0.0.1:{self.port}', f'http://localhost:{self.port}'
+
+    def hosts(self) -> tuple[str, ...]:
+        """The names this GUI answers to. Any other Host header is a foreign web page whose name was pointed at this
+        port (DNS rebinding): it could read the settings and the agents, so it gets nothing."""
+        return f'127.0.0.1:{self.port}', f'localhost:{self.port}'
 
     def start(self) -> None:
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
@@ -172,6 +208,8 @@ class Gui:
                 'mission_fields': list(MISSION_FIELDS), 'addable_roles': list(ADDABLE_ROLES)}
         if path == '/api/devices':
             return self.devices()
+        if path in ('/api/models', '/api/models/refresh'):
+            return self.models(refresh=path.endswith('/refresh'))
         if path == '/api/dcs':
             return self.dcs_state()
         if path.startswith('/api/agents/'):
@@ -199,6 +237,11 @@ class Gui:
             settings = settings_file.update(audio_changes(body), self.settings_path)
             self.apply_audio(settings, microphone=('mic_device' in body))
             return {'audio': settings.get('audio', {}), 'mic': settings.get('mic', {})}
+        if path == '/api/brain':   # Connections: the default model of every agent without its own
+            settings = settings_file.update({'brain': {'model': checked_model(body.get('model'))}}, self.settings_path)
+            if self.live.router is not None:
+                self.live.router.refresh()
+            return {'brain': settings.get('brain', {}), 'saved': True}
         if path == '/api/voice/test':
             return self.test_voice(body)
         if path == '/api/stop':
@@ -209,6 +252,27 @@ class Gui:
         if path in ('/api/dcs/update', '/api/dcs/remove'):
             return self.dcs_patch(path.rsplit('/', 1)[1])
         return None
+
+    def models(self, refresh: bool = False) -> dict:
+        """The brain connection and the models it offers. Without a catalog (no sign-in, no network) the list holds
+        what is already chosen, so the choices still show; "error" says why."""
+        settings = self.settings()
+        brain = settings.get('brain', {})
+        error = ''
+        if refresh or self.models_kept is None or time.monotonic() - self.models_kept[0] > MODELS_KEPT_S:
+            try:
+                self.models_kept = (time.monotonic(), self.catalog(settings) if brain.get('provider') == 'chatgpt'
+                                    else [])
+            except Exception as exc:   # AuthError, OSError, bad answer: shown, never fatal
+                error = str(exc) or type(exc).__name__
+        models = list(self.models_kept[1]) if self.models_kept else []
+        offered = {m['slug'] for m in models}
+        chosen = [default_model(settings), *(a.get('model') for a in self.agents.all())]
+        for slug in dict.fromkeys(m for m in chosen if m):
+            if slug not in offered:
+                models.append({'slug': slug, 'display_name': slug, 'missing': bool(self.models_kept)})
+        return {'provider': brain.get('provider', 'none'), 'default': default_model(settings), 'models': models,
+                'error': error}
 
     def open_srs(self) -> dict:
         """The Status screen's "Open SRS": starts the server/client if closed (or crashed) and brings the client's
@@ -381,6 +445,9 @@ class Gui:
                     gui.events.unsubscribe(q)
 
             def do_GET(self):
+                if self.headers.get('Host', '') not in gui.hosts():
+                    self.send_error(403)
+                    return
                 path = self.path.split('?')[0]
                 if path in STATIC:
                     name, content_type = STATIC[path]
@@ -402,7 +469,7 @@ class Gui:
                     self._json(200, data)
 
             def do_POST(self):
-                if self.headers.get('Origin', '') not in gui.origins():
+                if self.headers.get('Host', '') not in gui.hosts() or                         self.headers.get('Origin', '') not in gui.origins():
                     self.send_error(403)
                     return
                 try:

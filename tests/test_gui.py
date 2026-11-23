@@ -457,6 +457,18 @@ class Api(WithAgents):
         self.call('/api/stop', {})
         self.assertTrue(self.live.stop.is_set())
 
+    def test_foreign_host_reads_nothing(self):
+        # A web page whose name resolves to 127.0.0.1 (DNS rebinding) arrives with its own Host header.
+        for path in ('/', '/api/settings', '/api/agents/instructor'):
+            request = urllib.request.Request(self.gui.url.rstrip('/') + path, headers={'Host': 'example.com'})
+            with self.assertRaises(urllib.error.HTTPError) as caught:
+                urllib.request.urlopen(request, timeout=5)
+            self.assertEqual(caught.exception.code, 403, path)
+        request = urllib.request.Request(self.gui.url.rstrip('/') + '/api/settings',
+                                         headers={'Host': f'localhost:{self.gui.port}'})
+        with urllib.request.urlopen(request, timeout=5) as response:
+            self.assertEqual(response.status, 200)
+
 
 class Routing(WithAgents):
     def test_each_agent_answers_with_its_own_brain_and_voice(self):

@@ -254,6 +254,22 @@
         </div>
       </section>
 
+      <!-- Brain -->
+      <section class="tab-panel" id="tab-brain" role="tabpanel" hidden>
+        <div class="columns">
+          <section class="panel wide">
+            <label class="field"><span data-t="brain.model"></span><select id="brain-model"></select></label>
+            <span class="hint" id="brain-hint"></span>
+            <div class="row"><button type="button" class="primary" id="brain-save" data-t="brain.save"></button></div>
+          </section>
+          <section class="panel">
+            <h2 data-t="brain.connection"></h2>
+            <p class="muted" id="brain-connection"></p>
+            <a href="#connections" class="more" data-t="brain.change_default"></a>
+          </section>
+        </div>
+      </section>
+
       <!-- STT -->
       <section class="tab-panel" id="tab-stt" role="tabpanel" hidden>
         <div class="columns">
@@ -336,6 +352,31 @@
           <h2 data-t="dcs.saved_games_title"></h2>
           <dl class="facts" id="dcs-saved-games"></dl>
           <p class="hint" data-t="dcs.saved_games_hint"></p>
+        </section>
+      </div>
+    </section>
+
+    <!-- Connections -->
+    <section class="screen" id="screen-connections" hidden>
+      <header class="head">
+        <div><h1 data-t="connections.title"></h1><p data-t="connections.subtitle"></p></div>
+        <div class="row"><span class="muted small" id="connections-state" aria-live="polite"></span></div>
+      </header>
+      <div class="columns">
+        <section class="panel wide">
+          <dl class="facts" id="connections-facts"></dl>
+          <label class="field"><span data-t="connections.default_model"></span><select id="default-model"></select></label>
+          <span class="hint" data-t="connections.default_hint"></span>
+          <div class="row">
+            <button type="button" class="primary" id="default-save" data-t="connections.save"></button>
+            <button type="button" class="ghost" id="models-refresh" data-t="connections.refresh"></button>
+          </div>
+          <p class="hint" id="models-error" hidden></p>
+        </section>
+        <section class="panel">
+          <h2 data-t="connections.agents_title"></h2>
+          <dl class="facts" id="connections-agents"></dl>
+          <p class="hint" data-t="connections.agents_hint"></p>
         </section>
       </div>
     </section>

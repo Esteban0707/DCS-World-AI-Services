@@ -50,7 +50,9 @@ LOST_EVENTS = ('crash', 'dead', 'ejection', 'pilot_dead')
 # ground like CAS). Task names as the Mission Editor writes them.
 AIR_TASKS = ('CAP', 'Escort', 'Fighter Sweep', 'Intercept')
 GROUND_TASKS = ('CAS', 'Ground Attack', 'Pinpoint Strike', 'Runway Attack', 'SEAD', 'Antiship Strike', 'AFAC')
-NO_ATTACK_TASKS = ('Transport', 'Reconnaissance')   # DCS gives them no attack tasks at all
+# DCS gives them no attack tasks at all (MissionEditor/modules/me_action_db.lua; "Nothing" seen live 2026-11-23: Viper
+# took strike and attack orders and released nothing).
+NO_ATTACK_TASKS = ('Nothing', 'Transport', 'Reconnaissance', 'AWACS', 'Refueling', 'Airborne')
 # The model hears the editor task as its tasking from base (user, 2026-11-05: never "Mission Editor" on the radio, it
 # breaks the role-play; "not cleared for ground attack from base, next mission we ask for CAS").
 # Attack jobs.
@@ -1120,6 +1122,9 @@ class WingmanDesk(PilotRequests):   # the pilot's "tell me when..." (tool tell_p
         SAM group itself). weapon, attack altitude, attack heading (true degrees), dive or level."""
         if weapon not in WEAPONS or attack not in ATTACKS:
             return {'ok': False, 'detail': f'weapon one of {", ".join(WEAPONS)}, attack one of {", ".join(ATTACKS)}'}
+        problem = self.refuse_target(self.air(self.status()), 'ground')   # a point on the ground
+        if problem:
+            return {'ok': False, 'detail': problem}
         where = self.point(target)
         if isinstance(where, str):
             return {'ok': False, 'detail': where}

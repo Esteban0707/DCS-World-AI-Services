@@ -1,7 +1,8 @@
 """Brain providers: answer the pilot with the instructor's current context and tools.
 
 Every provider implements ask(question, context, language) -> answer text, raising BrainError when it cannot answer.
-Providers ("brain.provider" setting; the GUI will offer the choice of connection and model):
+Providers ("brain.provider" setting). The model: "brain.model" for every agent, unless the agent picks its own
+("model" in agents/<id>/agent.json; both chosen in the GUI):
 - "chatgpt": the pilot's own ChatGPT plan through Sign in with ChatGPT (instructor/chatgpt_auth.py), OpenAI
   Responses API. Sign in once with utilities/CHATGPT_LOGIN.cmd.
 - "none": no model; the instructor says so.
@@ -32,7 +33,7 @@ BRAIN_ERROR_TEXT = {'none': 'no_brain', 'limit': 'brain_limit', 'sign_in': 'brai
 
 
 class BrainError(Exception):
-    """kind: 'limit' (plan usage limit), 'sign_in' (no valid sign-in / permission), 'error' (anything else)."""
+    """kind: 'limit' (the plan's usage limit, or this app's own), 'sign_in' (no valid sign-in / permission), 'error' (anything else)."""
 
     def __init__(self, message: str, kind: str = 'error', code: str = ''):
         super().__init__(message)
@@ -286,11 +287,23 @@ def instructor_radio(srs: dict) -> str:
     return ', '.join(f'{freq} MHz {modulation.upper()}' for freq, modulation in channels) or 'unknown'
 
 
+def default_model(settings: dict) -> str:
+    return settings.get('brain', {}).get('model') or DEFAULT_MODEL
+
+
+def agent_model(settings: dict, agent: dict | None) -> str:
+    """The model an agent answers with: its own choice, else the program's default ("" in agent.json = default)."""
+    return (agent or {}).get('model') or default_model(settings)
+
+
 def create_brain(settings: dict, toolbox=None, radio: str | None = None, instructions: str | None = None,
-                 appendix=None, history_turns: int = HISTORY_TURNS) -> Brain:
+                 appendix=None, history_turns: int = HISTORY_TURNS, model: str = '') -> Brain:
     """radio and instructions: the agent's own channel ("251.000 AM") and mission; defaults: settings "srs" and the
-    original instructor mission. appendix, history_turns: see ChatGptBrain."""
+    original instructor mission. appendix, history_turns: see ChatGptBrain. model: the agent's own (agent_model);
+    default: settings "brain.model"."""
     config = settings.get('brain', {})
+    if model:
+        config = {**config, 'model': model}
     provider = config.get('provider', 'none')
     if provider == 'none':
         return NullBrain()

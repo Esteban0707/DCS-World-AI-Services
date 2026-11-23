@@ -462,6 +462,24 @@ class EditorTask(unittest.TestCase):
         self.assertIn('not cleared for ground attack: your tasking from base is CAP', result['detail'])
         self.assertEqual(scenario.tasks.sent, [])
 
+    def test_no_tasking_refuses_every_attack(self):
+        # Live 2026-11-23: Viper's group had task "Nothing"; it took strike and attack and DCS released nothing.
+        scenario = Scenario(editor_task='Nothing', enemies=[TANKS])
+        self.assertIn('not cleared to attack anything', scenario.desk.situation()['you']['task_note'])
+        for name, arguments in (('attack', {'target': 'Z1', 'how': 'all', 'against': 'ground'}),
+                                ('strike', {'target': 'Z1', 'weapon': 'bombs', 'altitude_ft': 0,
+                                            'attack_heading': -1, 'attack': 'auto'})):
+            result = scenario.call(name, **arguments)
+            self.assertFalse(result['ok'], name)
+            self.assertIn('your tasking from base is Nothing', result['detail'])
+        self.assertEqual(scenario.tasks.sent, [])
+
+    def test_cap_refuses_a_strike_on_the_ground(self):
+        scenario = Scenario(editor_task='CAP', enemies=[TANKS])
+        result = scenario.call('strike', target='Z1', weapon='auto', altitude_ft=0, attack_heading=-1, attack='auto')
+        self.assertFalse(result['ok'])
+        self.assertIn('not cleared for ground attack', result['detail'])
+
     def test_never_the_editor_in_what_the_model_reads(self):
         # User, 2026-11-05: "Mission Editor" on the radio breaks the role-play.
         scenario = Scenario(editor_task='Transport', started='uncontrolled')

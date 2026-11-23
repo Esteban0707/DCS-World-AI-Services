@@ -30,7 +30,7 @@ from wingman.memory import HISTORY_TURNS as WINGMAN_HISTORY_TURNS, Memory, brain
 from wingman.tools import WingmanToolBox
 from gui.status import Live
 from instructor.blackbox import BlackBox
-from instructor.brain import BRAIN_ERROR_TEXT, BrainError, NullBrain, create_brain
+from instructor.brain import BRAIN_ERROR_TEXT, BrainError, NullBrain, agent_model, create_brain
 from instructor.tools import ToolBox
 from instructor.tower_view import TowerView
 from shared.agents import GROUP_ROLES, SENSOR_ROLES, AgentStore, channel_label
@@ -41,6 +41,7 @@ from shared.net import Net, NetToolBox
 from shared.radio_change import RadioToolBox
 from shared.triggers import ConditionWatch, FlagWatch, InternalFlags, TriggerToolBox
 from shared.radio import describe, selected_radio, transmit_radio
+from shared import settings as settings_file
 
 ROOT = Path(__file__).resolve().parent.parent
 WINDOW_GONE_S = 1.0     # on top of up to KEEPALIVE_S for the server to notice (client/chrome_dictation.py)
@@ -351,6 +352,7 @@ class Router:
         self.responders: dict[str, Responder] = {}
         self.lock = threading.Lock()
         self.forget = None   # agent_id -> None: drops what run() keeps for a deleted agent
+        self.settings = None  # () -> settings.json now: the default model, changed in the GUI's Connections
 
     def heard(self, text: str, agent: dict | None = None) -> None:
         agent_id = (agent or {}).get('id') or (self.agents.default() or {}).get('id')
@@ -396,7 +398,7 @@ class Router:
             return self.responders[agent_id]
 
     def refresh(self) -> None:
-        """After a change in the GUI: each brain gets its agent's current mission and channel."""
+        """After a change in the GUI: each brain gets its agent's current mission, channel and model."""
         with self.lock:
             for agent_id, responder in self.responders.items():
                 agent = self.agents.get(agent_id)
@@ -407,6 +409,8 @@ class Router:
                     responder.brain.instructions = self.agents.mission(agent_id)
                     responder.brain.radio = channel_label(agent)
                     responder.brain.agent_name = agent['name']
+                if self.settings is not None and hasattr(responder.brain, 'model'):   # chosen in the GUI
+                    responder.brain.model = agent_model(self.settings(), agent)
                 desk = getattr(responder, 'desk', None)
                 if desk is not None and agent.get('role') in (*GROUP_ROLES, *SENSOR_ROLES):
                     desk.configure(agent)
@@ -530,7 +534,7 @@ def run(settings: dict, voice=True, open_srs=False, stop_when_window_closed=Fals
         extra = {'appendix': brain_appendix(memory, playbook), 'history_turns': WINGMAN_HISTORY_TURNS} \
             if memory else {}
         brain = NullBrain() if repeat else create_brain(settings, box, channel_label(agent), agents.mission(agent_id),
-                                                        **extra)
+                                                        model=agent_model(settings, agent), **extra)
         if hasattr(brain, 'agent_name'):
             brain.agent_name = agent['name']
         print(f'{agent["name"]}: brain {brain.name} {getattr(brain, "model", "")}'.rstrip())
@@ -554,6 +558,7 @@ def run(settings: dict, voice=True, open_srs=False, stop_when_window_closed=Fals
 
     router = Router(agents, make_responder)
     router.forget = lambda agent_id: desks.pop(agent_id, None)
+    router.settings = settings_file.load
     live.router = router
     flag_watch = FlagWatch(agents, state, tasks, internal)
     condition_watch = ConditionWatch(agents, desks.get)   # "when this happens" rows: read from the squads' desks

@@ -4,8 +4,8 @@
 'use strict';
 
 const NAV = ['status', 'services', 'connections', 'srs', 'audio', 'aircraft', 'flights', 'dcs', 'settings'];
-const BUILT = new Set(['status', 'services', 'audio', 'dcs']);
-const TABS = [['frequency', true], ['mission', true], ['triggers', true], ['tts', true], ['stt', true]];
+const BUILT = new Set(['status', 'services', 'connections', 'audio', 'dcs']);
+const TABS = [['frequency', true], ['mission', true], ['triggers', true], ['brain', true], ['tts', true], ['stt', true]];
 const VOICES = ['F1', 'F2', 'F3', 'F4', 'F5', 'M1', 'M2', 'M3', 'M4', 'M5'];
 const ENGINES = [['supertonic', true], ['kokoro', false], ['api', false]];
 const SLIDERS = [  // key, min, max, step, shown as
@@ -143,6 +143,7 @@ function route() {
   if (id === 'services') openServices();
   if (id === 'audio') openAudio();
   if (id === 'dcs') openDcs();
+  if (id === 'connections') openConnections();
 }
 
 // --- DCS screen ------------------------------------------------------------------------------------------------------
@@ -326,6 +327,7 @@ async function openAgent(agentId, tab) {
   if (tab === 'frequency') openFrequency();
   if (tab === 'mission') openMission();
   if (tab === 'triggers') openTriggers();
+  if (tab === 'brain') openBrain();
   if (tab === 'tts') openTts();
   if (tab === 'stt') openStt();
 }
@@ -685,6 +687,60 @@ async function testVoice(via) {
   }
 }
 
+// Brain tab: the agent's own model, or the program's default (Connections).
+function modelOptions(catalog) {
+  return catalog.models.map(m => el('option', {
+    value: m.slug,
+    text: m.missing ? t('connections.model_missing', { model: m.slug })
+      : m.display_name !== m.slug ? `${m.display_name} (${m.slug})` : m.slug,
+  }));
+}
+
+function modelHint(catalog) {
+  return catalog.error ? t('connections.catalog_error', { error: catalog.error }) : '';
+}
+
+async function openBrain() {
+  let catalog;
+  try { catalog = await api('/api/models'); } catch (e) { return; }
+  $('brain-model').replaceChildren(
+    el('option', { value: '', text: t('brain.use_default', { model: catalog.default }) }), ...modelOptions(catalog));
+  $('brain-model').value = agent.model || '';
+  $('brain-hint').textContent = [t('brain.model_hint'), modelHint(catalog)].filter(Boolean).join(' ');
+  $('brain-connection').textContent = t(`connections.provider_${catalog.provider}`);
+}
+
+// --- Connections screen ------------------------------------------------------------------------------------------
+
+async function openConnections(refresh = false) {
+  let catalog, services;
+  if (refresh) $('connections-state').textContent = t('connections.asking');
+  try {
+    [catalog, { services }] = await Promise.all([api(refresh ? '/api/models/refresh' : '/api/models'),
+      api('/api/status')]);
+  } catch (e) { $('connections-state').textContent = ''; return; }
+  if (refresh) $('connections-state').textContent = '';
+  $('connections-facts').replaceChildren(
+    el('dt', { text: t('connections.provider') }), el('dd', { text: t(`connections.provider_${catalog.provider}`) }),
+    el('dt', { text: t('connections.models_offered') }),
+    el('dd', { text: String(catalog.models.filter(m => !m.missing).length) }));
+  $('default-model').replaceChildren(...modelOptions(catalog));
+  $('default-model').value = catalog.default;
+  $('models-error').textContent = modelHint(catalog);
+  $('models-error').hidden = !catalog.error;
+  $('connections-agents').replaceChildren(...services.filter(s => !s.soon).flatMap(s => [
+    el('dt', { text: s.name }), el('dd', { text: s.brain }),
+  ]));
+}
+
+async function saveDefaultModel() {
+  try {
+    await api('/api/brain', { model: $('default-model').value });
+    flash('connections-state', t('connections.saved'));
+    openConnections();
+  } catch (e) { /* shown */ }
+}
+
 // STT tab
 function openStt() {
   $('stt-provider').textContent = t(`texts.provider_${(settings.speech || {}).provider || 'none'}`);
@@ -760,6 +816,9 @@ async function start() {
   $('tts-output').addEventListener('change', e => { draft.output = e.target.value; });
   $('test-srs').addEventListener('click', () => testVoice('srs'));
   $('test-speakers').addEventListener('click', () => testVoice('speakers'));
+  $('brain-save').addEventListener('click', () => saveAgent({ model: $('brain-model').value }));
+  $('default-save').addEventListener('click', saveDefaultModel);
+  $('models-refresh').addEventListener('click', () => openConnections(true));
   $('stt-save').addEventListener('click', () => saveAgent({ speech: { language: $('stt-language').value } }));
   $('mic').addEventListener('change', e => saveAudio('mic_device', e.target.value));
   $('output').addEventListener('change', e => saveAudio('output_device', e.target.value));

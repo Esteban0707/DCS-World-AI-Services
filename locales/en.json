@@ -24,7 +24,7 @@
   "look_at": "Look at: {controls}.",
   "nothing_to_repeat": "I have not said anything to repeat yet.",
   "no_brain": "I have no model connected to answer that yet.",
-  "brain_limit": "You have reached your ChatGPT plan usage limit. Check it in your ChatGPT usage settings.",
+  "brain_limit": "The ChatGPT usage limit was reached: your plan's, or this app's own limit. Check Usage in your ChatGPT settings.",
   "brain_sign_in": "I need you to sign in with ChatGPT again before I can answer.",
   "brain_error": "I could not reach the model. Try again in a moment.",
   "brain_test_question": "Instructor, this is the pilot, radio check. How do you read?",
@@ -191,7 +191,7 @@
       "group_hint_wingman": "Exactly as its aircraft group is called in the Mission Editor (e.g. Manolo): one aircraft, LATE ACTIVATION ticked.",
       "group_hint_vehicles": "Exactly as the vehicle group is called in the Mission Editor (e.g. Bison). Only vehicles in that group.",
       "group_hint_ships": "Exactly as the ship group is called in the Mission Editor (e.g. Mother). Its first ship is the one that carries the aids.",
-      "group_hint_artillery":"Exactly as the artillery group is called in the Mission Editor (e.g. Archer). Only artillery in that group.",
+      "group_hint_artillery": "Exactly as the artillery group is called in the Mission Editor (e.g. Archer). Only artillery in that group.",
       "create": "Create agent",
       "cancel": "Cancel",
       "created": "Agent created: tune its frequency in the aircraft"
@@ -297,12 +297,14 @@
       "actions_row": "Action {n}: needs a name (starting with a letter, not one of the agent's own tools, not repeated), a flag and when to use it.",
       "events": "The events could not be read.",
       "actions": "The actions could not be read.",
-      "message": "Write a message for the assistant (up to 2000 characters)."
+      "message": "Write a message for the assistant (up to 2000 characters).",
+      "model": "Choose a model from the list."
     },
     "tabs": {
       "frequency": "Frequency",
       "mission": "Mission",
       "triggers": "Triggers",
+      "brain": "Brain",
       "tts": "TTS",
       "stt": "STT"
     },
@@ -366,7 +368,7 @@
       "saved_note": "Saved.",
       "error_none": "No brain is configured: set \"brain\" in settings.json.",
       "error_sign_in": "The ChatGPT sign-in is missing or expired: run utilities\\CHATGPT_LOGIN.cmd.",
-      "error_limit": "The plan's usage limit was reached: try again later.",
+      "error_limit": "The ChatGPT usage limit was reached (your plan's, or this app's own in ChatGPT Settings > Usage): try again later.",
       "error_error": "The assistant could not answer: {detail}"
     },
     "triggers": {
@@ -424,6 +426,32 @@
       "microphone": "Microphone",
       "microphone_now": "Listening on {device}.",
       "change_microphone": "Change it in Controls and audio"
+    },
+    "brain": {
+      "model": "Model",
+      "use_default": "Default ({model})",
+      "model_hint": "The model this agent thinks with. Default follows the model chosen in Connections; pick another for a role that needs it (a stronger one for a commander, a faster one for a wingman).",
+      "save": "Save",
+      "connection": "Connection",
+      "change_default": "Change the default in Connections"
+    },
+    "connections": {
+      "title": "Connections",
+      "subtitle": "The brain the agents think with, and its default model. Each agent may pick its own model in its Brain tab.",
+      "provider": "Connection",
+      "provider_chatgpt": "ChatGPT plan (Sign in with ChatGPT)",
+      "provider_none": "No model: agents repeat what they heard",
+      "models_offered": "Models offered by your account",
+      "default_model": "Default model",
+      "default_hint": "Every agent set to Default uses this one. Running agents change at once.",
+      "save": "Save",
+      "refresh": "Refresh list",
+      "asking": "Asking your account…",
+      "saved": "Saved. Running agents use it from their next answer.",
+      "model_missing": "{model} (no longer offered by your account)",
+      "catalog_error": "The model list could not be read ({error}); showing the models already chosen.",
+      "agents_title": "Agents",
+      "agents_hint": "Each agent's connection and the model it answers with."
     }
   },
   "atc": {

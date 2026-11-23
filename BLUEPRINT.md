@@ -2024,6 +2024,80 @@ anything is uploaded; nothing is published by us.
 - Open: a second brain provider (API key / local model) for pilots without a ChatGPT plan; a check of a full
   English setup (setup picks English on a non-Spanish Windows; not checked in this pass); a short demo video.
 
+## Model per agent: Connections screen and Brain tab (2026-11-23; offline-verified, GUI screenshots; not flown)
+
+- User's request: a model picker in the GUI, so different roles can think with different models.
+- Default model: settings "brain.model", chosen in the new **Connections** screen (connection, number of models the
+  account offers, default model, each agent's model). An agent's own model: "model" in agent.json ("" or absent =
+  the default), chosen in its new **Brain** tab. `instructor/brain.py` agent_model() picks; create_brain(model=...).
+- The list is the signed-in account's catalog (chatgpt_auth.list_models; 10 models on 2026-11-23), kept 10 min,
+  "Refresh list" asks again. Without it (no sign-in, no network) the models already chosen still show, with the
+  reason. A chosen model the catalog no longer offers stays chosen, marked missing.
+- Applies at once: Router.refresh() gives each running brain its model (Router.settings reads settings.json).
+- The Triggers assistant keeps the default model.
+- Why the brain stopped this morning (2026-11-23): `subscription_sharing_usage_limit_exceeded` (HTTP 429) is the
+  per-app weekly cap in ChatGPT Settings > Usage > App limits, separate from the plan's own limits; two
+  "DCS-Instructor" apps were listed there (this one and the release test) and the one in use was off. Fixed by the
+  user there. Our message said "your plan's limit"; since the audit below it names both limits.
+- 485 pass (tests/test_models.py).
+
+## Research: changing an AI group's tasking from the running mission (2026-11-23; nothing built)
+
+- User's question: can the model change what the editor sets (ROE, CAS, CAP, Ground Attack...) from the mission?
+- DCS's own definitions (MissionEditor/modules/me_action_db.lua, read 2026-11-23): the group's main task is a
+  preset. Choosing it in the editor adds an en-route task `EngageTargets` with target types (CAS: Helicopters, Ground
+  Units, Light armed ships; CAP: Air; SEAD: Air Defence; Antiship: Ships; Fighter Sweep: Planes) plus options
+  (CAP and Fighter Sweep: option 17 PROHIBIT_AG = true, "Restrict Air-to-Ground Attack"; CAS: reaction EVADE_FIRE,
+  radar for attack only, PROHIBIT_JETT...). The editor also hides tasks per main task (CAP offers no AttackGroup /
+  Bombing); whether the engine enforces that at run time is not known.
+- So, from the mission (Controller:setOption / pushTask / setTask, as instructor_tasks.lua already does for ROE,
+  Bombing, Strafing, AttackGroup, EngageTargetsInZone): ROE, reaction, radar, restrictions and the EngageTargets
+  "package" of any main task can be changed live. The main task itself has no scripting call.
+- Hypothesis to fly: the 2026-11-04 "CAP does not attack the ground" was option 17 set by the CAP preset; a CAP
+  wingman with setOption(17, false) may obey a strike. If not, the only full change is respawning the group with a new
+  task (coalition.addGroup, same name, in the air): loses damage, fuel and spent ammo state; not for player groups.
+- Keep the rule: the model never sends Lua; new powers come as checked tools (an option from a fixed list, an
+  engage-package from DCS's own target types).
+
+### Flight and decision (2026-11-23, ~10:09-10:22, F-5E, Viper)
+
+- Built and then removed the same day: a wingman tool clearing option 17 (PROHIBIT_AG) on the leader's word.
+- The flight showed the real block: Viper's group had main task "Nothing" (not CAP; no option 17). DCS's editor gives
+  "Nothing" no attack tasks at all (me_action_db.lua: only orbit, refuelling, follow, aerobatics). Strike and attack
+  were accepted by our desk (it did not know "Nothing") and DCS's AI released nothing for 3 minutes.
+- So the main task gates attacks and cannot be changed by script. The only way around is respawning the group with
+  another task; the user rejected it ("eso es un cheto"): **the Mission Editor sets the wingman's task beforehand**.
+- Option 17 alone on a CAP group was never flown.
+- Fixed after it: NO_ATTACK_TASKS now has Nothing, Transport, Reconnaissance, AWACS, Refueling, Airborne (DCS's
+  editor gives them no attack tasks), and strike checks the tasking too (it did not: Viper's strike was taken). The
+  wingman now says it in character instead of flying an attack that never releases. 487 pass. Not flown.
+
+## Audit before publishing the 2026-11-23 changes (2026-11-23; offline-verified, 488 pass; not flown)
+
+Scope: everything changed since the published copy (commit 322d2f8): model per agent, the wingman tasking check;
+the GUI server's exposure; what make_release.py ships. Findings, all fixed:
+
+1. **GUI readable by a foreign web page (DNS rebinding)**. POSTs were checked by Origin, GETs by nothing: a web page
+   whose name is pointed at 127.0.0.1 could read /api/settings (the ChatGPT app id, devices, paths) and the agents
+   (missions, a wingman's memory of the pilot). Now `Gui.hosts()`: any request whose Host header is not
+   127.0.0.1:<port> or localhost:<port> gets 403 (tests/test_gui.py test_foreign_host_reads_nothing).
+2. **Connections: "Saved" never seen**: the reload after saving emptied the note at once. Now only "Refresh list"
+   clears it.
+3. **A chosen model the account no longer offers was not marked** (the server said "missing", the page ignored
+   it). Now shown as "<slug> (no longer offered by your account)" in both lists.
+4. **Limit message**: the spoken text (en/es) and the Triggers assistant's now name both limits: the plan's, and
+   this app's own in ChatGPT Settings > Usage (the cause of the 2026-11-23 stop).
+5. Small: wingman/rules.md line width; locales/en.json "radio" block back to its compact form.
+
+Checked and fine: 487 tests before the fixes; no credentials or personal paths in what ships (make_release.py scan);
+no Spanish in the new code; the model slug is checked (`MODEL_SLUG`) before it is saved or sent; the settings are
+not changed by create_brain(model=...); "Airborne" is a task name in DCS's me_action_db.lua (removed from the
+aircraft lists there, harmless in NO_ATTACK_TASKS). The Connections screen was rendered in headless Chrome against a
+temporary GUI (2 offered models + one no longer offered): lists and agent models as expected, no console errors.
+
+Left as is (known, small): the first catalog request that fails is asked again on every opening of Connections or
+a Brain tab (each waits for the network); /api/models/refresh is a GET.
+
 ## Future: commanders for both sides and dynamic missions (ideas agreed in talk, 2026-11-02 night; nothing built)
 
 - **Blue commander** (role play): talks to the pilot, gives the mission, reports, reacts (like Buenos: heard ->

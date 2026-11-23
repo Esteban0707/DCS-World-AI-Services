@@ -30,7 +30,7 @@
   "look_at": "Mira: {controls}.",
   "nothing_to_repeat": "Todavía no he dicho nada que repetir.",
   "no_brain": "Todavía no tengo un modelo conectado para responder a eso.",
-  "brain_limit": "Llegaste al límite de uso de tu plan de ChatGPT. Revísalo en la configuración de uso de ChatGPT.",
+  "brain_limit": "Se alcanzó el límite de uso de ChatGPT: el de tu plan, o el de esta aplicación. Revísalo en Uso, en la configuración de ChatGPT.",
   "brain_sign_in": "Necesito que vuelvas a iniciar sesión con ChatGPT para poder responder.",
   "brain_error": "No pude consultar al modelo. Inténtalo de nuevo en un momento.",
   "brain_test_question": "Instructor, aquí el piloto, prueba de radio. ¿Me recibes?",

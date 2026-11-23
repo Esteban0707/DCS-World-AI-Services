@@ -7,6 +7,7 @@ import collections
 import threading
 import time
 
+from instructor.brain import agent_model
 from shared.agents import airfield_mode, channel_label
 from shared.radio import describe, selected_radio
 
@@ -188,12 +189,14 @@ ROLE_ORDER = ('instructor', 'atc', 'controller', 'squad', 'vehicles', 'artillery
 
 def services(settings: dict, agents) -> list[dict]:
     """The agents from their folders, then the roles still to come."""
-    brain = settings.get('brain', {})
-    connection = f'{text_provider(brain.get("provider", "none"))} {brain.get("model", "")}'.strip()
+    provider = settings.get('brain', {}).get('provider', 'none')
+
+    def brain(agent: dict) -> str:   # its connection and its own model (or the default)
+        return text_provider(provider) if provider == 'none' else f'{text_provider(provider)} {agent_model(settings, agent)}'
     listed = [{'id': a['id'], 'name': a['name'], 'role': a.get('role'), 'active': bool(a.get('active')),
                'frequency': None if airfield_mode(a) else channel_label(a),   # the page names the airfield mode
                'frequency_mode': a.get('frequency_mode', 'fixed'),
-               'brain': connection, 'voice': (a.get('voice') or {}).get('name', '')}
+               'brain': brain(a), 'voice': (a.get('voice') or {}).get('name', '')}
               for a in (agents.all() if agents else [])]
     listed.sort(key=lambda s: (ROLE_ORDER.index(s['role']) if s['role'] in ROLE_ORDER else len(ROLE_ORDER), s['id']))
     roles = {a['role'] for a in listed}
