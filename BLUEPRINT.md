@@ -2095,6 +2095,8 @@ not changed by create_brain(model=...); "Airborne" is a task name in DCS's me_ac
 aircraft lists there, harmless in NO_ATTACK_TASKS). The Connections screen was rendered in headless Chrome against a
 temporary GUI (2 offered models + one no longer offered): lists and agent models as expected, no console errors.
 
+Published the same day as v0.2.0-alpha (tag and GitHub pre-release), at the user's request, before any flight.
+
 Left as is (known, small): the first catalog request that fails is asked again on every opening of Connections or
 a Brain tab (each waits for the network); /api/models/refresh is a GET.
 

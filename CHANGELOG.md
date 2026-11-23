@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0-alpha (2026-11-23)
 
 - GUI: Connections screen (default model for every agent, chosen from the models your ChatGPT account offers) and a
   Brain tab per agent (its own model, e.g. a stronger one for a commander, a faster one for a wingman). Changes
